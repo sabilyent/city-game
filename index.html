@@ -49,8 +49,124 @@
         </label>
       </div>
       
-      <!-- Start Button -->
-      <button id="start-btn" class="btn-start">Start Building</button>
+      <!-- Dynamic Action Panels -->
+      <div id="startup-panels" style="margin-top: 20px;">
+        
+        <!-- Load/Unlock Panel -->
+        <div id="panel-unlock" style="display: none;">
+          <h2 id="unlock-title" class="start-panel-title">Unlock Existing City</h2>
+          <p id="unlock-desc" class="start-panel-desc">Welcome back, Mayor! Enter your password to load your city.</p>
+          
+          <div class="start-input-group">
+            <label id="unlock-password-lbl" for="unlock-password" class="start-input-label">Password</label>
+            <input type="password" id="unlock-password" class="start-input" placeholder="Enter password...">
+          </div>
+          
+          <div id="unlock-error" class="error-message">Incorrect password. Please try again.</div>
+          
+          <button id="btn-unlock-load" class="btn-start">Unlock & Load</button>
+          
+          <div class="start-divider-text">Or</div>
+          
+          <div class="start-actions-row">
+            <button id="btn-unlock-new" class="btn-secondary">New City</button>
+            <button id="btn-unlock-import" class="btn-secondary">Import Save</button>
+          </div>
+        </div>
+
+        <!-- Create Password for Old Data Panel -->
+        <div id="panel-secure-old" style="display: none;">
+          <h2 id="secure-title" class="start-panel-title">Secure Existing City</h2>
+          <p id="secure-desc" class="start-panel-desc">Existing city found (unsecured). Create a password to protect your city!</p>
+          
+          <div class="start-input-group">
+            <label id="secure-pw-lbl" for="secure-password" class="start-input-label">New Password</label>
+            <input type="password" id="secure-password" class="start-input" placeholder="Create password...">
+          </div>
+          <div class="start-input-group">
+            <label id="secure-confirm-lbl" for="secure-confirm" class="start-input-label">Confirm Password</label>
+            <input type="password" id="secure-confirm" class="start-input" placeholder="Confirm password...">
+          </div>
+          
+          <div id="secure-error" class="error-message">Passwords do not match or are too short.</div>
+          
+          <button id="btn-secure-load" class="btn-start">Secure & Load City</button>
+          
+          <div class="start-divider-text">Or</div>
+          
+          <div class="start-actions-row">
+            <button id="btn-secure-new" class="btn-secondary">New City</button>
+            <button id="btn-secure-import" class="btn-secondary">Import Save</button>
+          </div>
+        </div>
+
+        <!-- Create New Game Panel -->
+        <div id="panel-new-game" style="display: none;">
+          <h2 id="new-title" class="start-panel-title">Start New City</h2>
+          <p id="new-desc" class="start-panel-desc">Start a new metropolis! Create a password to protect your city.</p>
+          
+          <div class="start-input-group">
+            <label id="new-pw-lbl" for="new-password" class="start-input-label">Password</label>
+            <input type="password" id="new-password" class="start-input" placeholder="Create password...">
+          </div>
+          <div class="start-input-group">
+            <label id="new-confirm-lbl" for="new-confirm" class="start-input-label">Confirm Password</label>
+            <input type="password" id="new-confirm" class="start-input" placeholder="Confirm password...">
+          </div>
+          
+          <div id="new-error" class="error-message">Passwords do not match or are too short.</div>
+          
+          <button id="btn-create-start" class="btn-start">Create & Start Building</button>
+          
+          <div class="start-actions-row" style="margin-top: 16px;">
+            <button id="btn-new-cancel" class="btn-secondary" style="display: none;">Back</button>
+            <button id="btn-new-import" class="btn-secondary">Import Save</button>
+          </div>
+        </div>
+
+        <!-- File Unlock Panel -->
+        <div id="panel-file-unlock" style="display: none;">
+          <h2 id="file-unlock-title" class="start-panel-title">Unlock Imported City</h2>
+          <p id="file-unlock-desc" class="start-panel-desc">Imported save is password-protected. Enter password to load it.</p>
+          
+          <div class="start-input-group">
+            <label id="file-unlock-password-lbl" for="file-unlock-password" class="start-input-label">Password</label>
+            <input type="password" id="file-unlock-password" class="start-input" placeholder="Enter password...">
+          </div>
+          
+          <div id="file-unlock-error" class="error-message">Incorrect password. Please try again.</div>
+          
+          <button id="btn-file-unlock-load" class="btn-start">Unlock & Import</button>
+          
+          <div class="start-actions-row" style="margin-top: 16px;">
+            <button id="btn-file-unlock-cancel" class="btn-secondary">Cancel</button>
+          </div>
+        </div>
+
+        <!-- File Secure Panel -->
+        <div id="panel-file-secure" style="display: none;">
+          <h2 id="file-secure-title" class="start-panel-title">Secure Imported City</h2>
+          <p id="file-secure-desc" class="start-panel-desc">Imported save has no password. Create a password to protect it.</p>
+          
+          <div class="start-input-group">
+            <label id="file-secure-pw-lbl" for="file-secure-pw" class="start-input-label">Password</label>
+            <input type="password" id="file-secure-pw" class="start-input" placeholder="Create password...">
+          </div>
+          <div class="start-input-group">
+            <label id="file-secure-confirm-lbl" for="file-secure-confirm" class="start-input-label">Confirm Password</label>
+            <input type="password" id="file-secure-confirm" class="start-input" placeholder="Confirm password...">
+          </div>
+          
+          <div id="file-secure-error" class="error-message">Passwords do not match or are too short.</div>
+          
+          <button id="btn-file-secure-load" class="btn-start">Secure & Import</button>
+          
+          <div class="start-actions-row" style="margin-top: 16px;">
+            <button id="btn-file-secure-cancel" class="btn-secondary">Cancel</button>
+          </div>
+        </div>
+
+      </div>
       
       <!-- Credits -->
       <a href="https://x.com/ammaar" target="_blank" rel="noreferrer" class="credit-link" id="created-by-lbl">Created by @ammaar</a>
@@ -86,6 +202,13 @@
         
         <div class="stat-divider"></div>
         
+        <div class="stat-item">
+          <span id="time-lbl" class="stat-label">Time</span>
+          <span class="stat-item-val" style="color: #fff;"><span id="stat-time-val">00:00</span></span>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
         <!-- HUD Language Selector -->
         <div class="lang-selector">
           <button id="hud-lang-en" class="lang-btn active">EN</button>
@@ -97,7 +220,6 @@
         <!-- Save/Load Controls -->
         <div class="lang-selector">
           <button id="export-btn" class="lang-btn" title="Export Save Game">📤 <span id="export-lbl">Export</span></button>
-          <button id="import-btn" class="lang-btn" title="Import Save Game">📥 <span id="import-lbl">Import</span></button>
           <input type="file" id="import-file-input" style="display: none;" accept=".json">
         </div>
       </div>
@@ -156,21 +278,21 @@
           </button>
           
           <!-- Residential -->
-          <button id="tool-btn-Residential" class="tool-btn" title="+5 Citizens/day">
+          <button id="tool-btn-Residential" class="tool-btn" title="+5 Citizens/hour">
             <div class="tool-icon-box" style="background-color: #f87171; border-color: rgba(0,0,0,0.3);">🏠</div>
             <span class="tool-name">House</span>
             <span class="tool-cost">$100</span>
           </button>
           
           <!-- Commercial -->
-          <button id="tool-btn-Commercial" class="tool-btn" title="+$15/day">
+          <button id="tool-btn-Commercial" class="tool-btn" title="+$15/hour">
             <div class="tool-icon-box" style="background-color: #60a5fa; border-color: rgba(0,0,0,0.3);">🛍️</div>
             <span class="tool-name">Shop</span>
             <span class="tool-cost">$200</span>
           </button>
           
           <!-- Industrial -->
-          <button id="tool-btn-Industrial" class="tool-btn" title="+$40/day">
+          <button id="tool-btn-Industrial" class="tool-btn" title="+$40/hour">
             <div class="tool-icon-box" style="background-color: #facc15; border-color: rgba(0,0,0,0.3);">🏭</div>
             <span class="tool-name">Factory</span>
             <span class="tool-cost">$400</span>

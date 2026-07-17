@@ -800,3 +800,125 @@ input:checked + .slider:before {
     height: 56px;
   }
 }
+
+/* Startup screen input styling */
+.start-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.start-input-label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.start-input {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  color: #f8fafc;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.start-input:focus {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.start-input::placeholder {
+  color: #475569;
+}
+
+.start-panel-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.start-panel-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.start-divider-text {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #475569;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 20px 0;
+}
+
+.start-divider-text::before,
+.start-divider-text::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.start-divider-text:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.start-divider-text:not(:empty)::after {
+  margin-left: .5em;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.start-actions-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.start-actions-row > button {
+  flex: 1;
+}
+
+.error-message {
+  color: var(--color-red);
+  font-size: 12px;
+  margin-top: -8px;
+  margin-bottom: 12px;
+  text-align: left;
+  display: none;
+}
+

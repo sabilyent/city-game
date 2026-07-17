@@ -45,8 +45,8 @@ const BUILDINGS = {
     color: '#f87171',
     popGen: 5,
     incomeGen: 0,
-    desc: '+5 Citizens/day',
-    descBm: '+5 Penduduk/hari'
+    desc: '+5 Citizens/hour',
+    descBm: '+5 Penduduk/jam'
   },
   [BuildingType.Commercial]: {
     type: BuildingType.Commercial,
@@ -56,8 +56,8 @@ const BUILDINGS = {
     color: '#60a5fa',
     popGen: 0,
     incomeGen: 15,
-    desc: '+$15/day',
-    descBm: '+$15/hari'
+    desc: '+$15/hour',
+    descBm: '+$15/jam'
   },
   [BuildingType.Industrial]: {
     type: BuildingType.Industrial,
@@ -67,8 +67,8 @@ const BUILDINGS = {
     color: '#facc15',
     popGen: 0,
     incomeGen: 40,
-    desc: '+$40/day',
-    descBm: '+$40/hari'
+    desc: '+$40/hour',
+    descBm: '+$40/jam'
   },
   [BuildingType.Park]: {
     type: BuildingType.Park,
@@ -94,6 +94,7 @@ const TRANSLATIONS = {
     treasury: "Treasury",
     citizens: "Citizens",
     day: "Day",
+    time: "Time",
     sandbox: "Sandbox Mode",
     thinking: "Thinking...",
     analyzingData: "Analyzing city data...",
@@ -109,6 +110,36 @@ const TRANSLATIONS = {
     build: "Build",
     exportBtn: "Export",
     importBtn: "Import",
+    
+    // New Startup/Password Translations
+    unlockTitle: "Unlock Existing City",
+    unlockDesc: "Welcome back, Mayor! Enter your password to load your city.",
+    password: "Password",
+    enterPassword: "Enter password...",
+    unlockLoad: "Unlock & Load",
+    newCity: "New City",
+    importSave: "Import Save",
+    incorrectPassword: "Incorrect password. Please try again.",
+    secureTitle: "Secure Existing City",
+    secureDesc: "Existing city found (unsecured). Create a password to protect your city!",
+    newPassword: "New Password",
+    createPassword: "Create password...",
+    confirmPassword: "Confirm Password",
+    confirmPasswordPlaceholder: "Confirm password...",
+    secureLoad: "Secure & Load City",
+    passwordMismatch: "Passwords do not match or are too short (min 3 chars).",
+    newTitle: "Start New City",
+    newDesc: "Start a new metropolis! Create a password to protect your city.",
+    createStart: "Create & Start Building",
+    back: "Back",
+    fileUnlockTitle: "Unlock Imported City",
+    fileUnlockDesc: "Imported save is password-protected. Enter password to load it.",
+    unlockImport: "Unlock & Import",
+    cancel: "Cancel",
+    fileSecureTitle: "Secure Imported City",
+    fileSecureDesc: "Imported save has no password. Create a password to protect it.",
+    secureImport: "Secure & Import",
+    overwriteWarning: "Are you sure you want to start a new city? Your current save will be lost."
   },
   bm: {
     title: "SkyMetropolis",
@@ -120,6 +151,7 @@ const TRANSLATIONS = {
     treasury: "Perbendaharaan",
     citizens: "Penduduk",
     day: "Hari",
+    time: "Masa",
     sandbox: "Mod Bebas",
     thinking: "Berfikir...",
     analyzingData: "Menganalisis data bandar...",
@@ -135,6 +167,36 @@ const TRANSLATIONS = {
     build: "Bina",
     exportBtn: "Eksport",
     importBtn: "Import",
+    
+    // New Startup/Password Translations (BM)
+    unlockTitle: "Nyahkunci Bandar Sedia Ada",
+    unlockDesc: "Selamat kembali, Datuk Bandar! Masukkan kata laluan untuk memuatkan bandar anda.",
+    password: "Kata Laluan",
+    enterPassword: "Masukkan kata laluan...",
+    unlockLoad: "Nyahkunci & Muat",
+    newCity: "Bandar Baru",
+    importSave: "Import Fail",
+    incorrectPassword: "Kata laluan salah. Sila cuba lagi.",
+    secureTitle: "Lindungi Bandar Sedia Ada",
+    secureDesc: "Bandar sedia ada ditemui (tanpa perlindungan). Cipta kata laluan untuk melindungi bandar anda!",
+    newPassword: "Kata Laluan Baru",
+    createPassword: "Cipta kata laluan...",
+    confirmPassword: "Sahkan Kata Laluan",
+    confirmPasswordPlaceholder: "Sahkan kata laluan...",
+    secureLoad: "Lindungi & Muat Bandar",
+    passwordMismatch: "Kata laluan tidak sepadan atau terlalu pendek (min 3 aksara).",
+    newTitle: "Mula Bandar Baru",
+    newDesc: "Mula bandar metropolis baru! Cipta kata laluan untuk melindungi bandar anda.",
+    createStart: "Cipta & Mula Membina",
+    back: "Kembali",
+    fileUnlockTitle: "Nyahkunci Bandar Diimport",
+    fileUnlockDesc: "Fail simpanan diimport dilindungi kata laluan. Masukkan kata laluan untuk memuatkannya.",
+    unlockImport: "Nyahkunci & Import",
+    cancel: "Batal",
+    fileSecureTitle: "Lindungi Bandar Diimport",
+    fileSecureDesc: "Fail simpanan diimport tiada kata laluan. Cipta kata laluan untuk melindunginya.",
+    secureImport: "Lindungi & Import",
+    overwriteWarning: "Adakah anda pasti mahu memulakan bandar baru? Rekod simpanan sedia ada akan dipadamkan."
   }
 };
 
@@ -142,11 +204,17 @@ const TRANSLATIONS = {
 let currentLang = 'en';
 let gameStarted = false;
 let aiEnabled = true;
+let gamePasswordHash = null;
+let pendingStateToLoad = null;
+let importedStateToLoad = null;
+
 
 let stats = {
   money: INITIAL_MONEY,
   population: 0,
   day: 1,
+  hour: 0,
+  minute: 0,
 };
 
 let selectedTool = BuildingType.Road;
@@ -199,83 +267,118 @@ const getApiKey = () => {
 };
 
 // Offline generator fallback goals
+// Offline generator fallback goals
 const getOfflineGoal = (lang) => {
   const isBm = lang === 'bm';
-  const goals = [
-    {
-      description: isBm 
-        ? "Bina sekurang-kurangnya 3 buah Rumah untuk menampung lebih ramai penduduk baru!" 
-        : "Build at least 3 Residential houses to accommodate more citizens!",
-      targetType: 'building_count',
-      buildingType: BuildingType.Residential,
-      targetValue: 3,
-      reward: 300,
-    },
-    {
-      description: isBm 
-        ? "Bina 2 buah Kedai komersil untuk merancakkan ekonomi tempatan!" 
-        : "Build 2 Commercial shops to boost the local economy!",
-      targetType: 'building_count',
-      buildingType: BuildingType.Commercial,
-      targetValue: 2,
-      reward: 400,
-    },
-    {
-      description: isBm 
-        ? "Kumpulkan wang sebanyak $1,500 dalam perbendaharaan bandar." 
-        : "Amass $1,500 in the city treasury.",
-      targetType: 'money',
-      targetValue: 1500,
-      reward: 200,
-    },
-    {
-      description: isBm 
-        ? "Tingkatkan jumlah penduduk bandar anda sehingga mencapai 100 orang." 
-        : "Grow your city's population to reach 100 citizens.",
-      targetType: 'population',
-      targetValue: 100,
-      reward: 500,
-    },
-    {
-      description: isBm 
-        ? "Bina 1 buah Kilang industri berat untuk meningkatkan pendapatan harian." 
-        : "Build 1 Industrial factory to boost your daily income.",
-      targetType: 'building_count',
-      buildingType: BuildingType.Industrial,
-      targetValue: 1,
-      reward: 600,
-    },
-    {
-      description: isBm 
-        ? "Bina 2 buah Taman rekreasi untuk mengindahkan pemandangan metropolis anda." 
-        : "Build 2 Parks to beautify your metropolis.",
-      targetType: 'building_count',
-      buildingType: BuildingType.Park,
-      targetValue: 2,
-      reward: 250,
-    }
-  ];
-
+  
   // Count existing buildings
   const counts = {};
   grid.flat().forEach(tile => {
     counts[tile.buildingType] = (counts[tile.buildingType] || 0) + 1;
   });
 
-  const eligibleGoals = goals.filter(g => {
-    if (g.targetType === 'money' && stats.money >= g.targetValue) return false;
-    if (g.targetType === 'population' && stats.population >= g.targetValue) return false;
-    if (g.targetType === 'building_count' && g.buildingType) {
-      if ((counts[g.buildingType] || 0) >= g.targetValue) return false;
+  const resCount = counts[BuildingType.Residential] || 0;
+  const comCount = counts[BuildingType.Commercial] || 0;
+  const indCount = counts[BuildingType.Industrial] || 0;
+  const parkCount = counts[BuildingType.Park] || 0;
+
+  // We will define a list of dynamic generators that are guaranteed to require effort
+  const goalGenerators = [
+    {
+      // House build
+      generate: () => {
+        const targetValue = resCount + 3;
+        return {
+          description: isBm 
+            ? `Bina sekurang-kurangnya ${targetValue} buah Rumah untuk menampung lebih ramai penduduk baru!` 
+            : `Build at least ${targetValue} Residential houses to accommodate more citizens!`,
+          targetType: 'building_count',
+          buildingType: BuildingType.Residential,
+          targetValue: targetValue,
+          reward: 300,
+        };
+      }
+    },
+    {
+      // Shop build
+      generate: () => {
+        const targetValue = comCount + 2;
+        return {
+          description: isBm 
+            ? `Bina sekurang-kurangnya ${targetValue} buah Kedai komersil untuk merancakkan ekonomi tempatan!` 
+            : `Build at least ${targetValue} Commercial shops to boost the local economy!`,
+          targetType: 'building_count',
+          buildingType: BuildingType.Commercial,
+          targetValue: targetValue,
+          reward: 400,
+        };
+      }
+    },
+    {
+      // Money goal
+      generate: () => {
+        const targetValue = Math.ceil((stats.money + 500) / 500) * 500;
+        return {
+          description: isBm 
+            ? `Kumpulkan wang sebanyak $${targetValue.toLocaleString()} dalam perbendaharaan bandar.` 
+            : `Amass $${targetValue.toLocaleString()} in the city treasury.`,
+          targetType: 'money',
+          targetValue: targetValue,
+          reward: 200,
+        };
+      }
+    },
+    {
+      // Population goal
+      generate: () => {
+        const currentPop = stats.population;
+        const targetValue = Math.max(10, Math.ceil((currentPop + 15) / 10) * 10);
+        return {
+          description: isBm 
+            ? `Tingkatkan jumlah penduduk bandar anda sehingga mencapai ${targetValue} orang.` 
+            : `Grow your city's population to reach ${targetValue} citizens.`,
+          targetType: 'population',
+          targetValue: targetValue,
+          reward: 500,
+        };
+      }
+    },
+    {
+      // Factory build
+      generate: () => {
+        const targetValue = indCount + 1;
+        return {
+          description: isBm 
+            ? `Bina sekurang-kurangnya ${targetValue} buah Kilang industri berat untuk meningkatkan pendapatan.` 
+            : `Build at least ${targetValue} Industrial factories to boost your income.`,
+          targetType: 'building_count',
+          buildingType: BuildingType.Industrial,
+          targetValue: targetValue,
+          reward: 600,
+        };
+      }
+    },
+    {
+      // Park build
+      generate: () => {
+        const targetValue = parkCount + 2;
+        return {
+          description: isBm 
+            ? `Bina sekurang-kurangnya ${targetValue} buah Taman rekreasi untuk mengindahkan pemandangan.` 
+            : `Build at least ${targetValue} Parks to beautify your metropolis.`,
+          targetType: 'building_count',
+          buildingType: BuildingType.Park,
+          targetValue: targetValue,
+          reward: 250,
+        };
+      }
     }
-    return true;
-  });
+  ];
 
-  const selected = eligibleGoals.length > 0 
-    ? eligibleGoals[Math.floor(Math.random() * eligibleGoals.length)] 
-    : goals[Math.floor(Math.random() * goals.length)];
-
-  return { ...selected, completed: false };
+  // Pick one at random
+  const generator = goalGenerators[Math.floor(Math.random() * goalGenerators.length)];
+  const goal = generator.generate();
+  return { ...goal, completed: false };
 };
 
 const getOfflineNews = (lang) => {
@@ -317,6 +420,8 @@ const generateCityGoal = async (stats, grid, lang) => {
   `;
 
   const prompt = `You are the AI City Advisor for a simulation game. Based on the current city stats, generate a challenging but achievable short-term goal for the player to help the city grow. Return JSON.
+  IMPORTANT: The goal must NOT be already met by the current city stats. If they have $${stats.money}, the money target must be greater. If they have ${stats.population} citizens, the population target must be greater. If they have building counts: ${JSON.stringify(counts)}, the building targets must be greater than current counts.
+  
   JSON Schema structure:
   {
     "description": "A short description of the goal",
@@ -344,6 +449,26 @@ const generateCityGoal = async (stats, grid, lang) => {
       const data = await response.json();
       const text = data.candidates[0].content.parts[0].text;
       const goalData = JSON.parse(text);
+      
+      // Validate the goalData against current stats to make sure it's not already met!
+      let isAlreadyMet = false;
+      
+      if (goalData.targetType === 'money' && stats.money >= goalData.targetValue) {
+        isAlreadyMet = true;
+      } else if (goalData.targetType === 'population' && stats.population >= goalData.targetValue) {
+        isAlreadyMet = true;
+      } else if (goalData.targetType === 'building_count' && goalData.buildingType) {
+        const count = counts[goalData.buildingType] || 0;
+        if (count >= goalData.targetValue) {
+          isAlreadyMet = true;
+        }
+      }
+      
+      if (isAlreadyMet) {
+        // Fallback to a dynamically generated goal that is guaranteed not to be met
+        return getOfflineGoal(lang);
+      }
+      
       return { ...goalData, completed: false };
     }
   } catch (error) {
@@ -413,7 +538,7 @@ const addNewsItem = (item) => {
   newsBody.scrollTop = newsBody.scrollHeight;
 };
 
-// --- Save/Load and Export/Import Logic ---
+// // --- Save/Load and Export/Import Logic ---
 const saveGameLocal = () => {
   const state = {
     stats,
@@ -422,18 +547,23 @@ const saveGameLocal = () => {
     aiEnabled,
     currentGoal,
     newsFeed,
-    gameStarted
+    gameStarted,
+    passwordHash: gamePasswordHash
   };
   localStorage.setItem('skymetropolis_save', JSON.stringify(state));
 };
 
 const restoreGameState = (state) => {
   stats = state.stats;
+  if (stats.hour === undefined) stats.hour = 0;
+  if (stats.minute === undefined) stats.minute = 0;
+  
   currentLang = state.currentLang || 'en';
   aiEnabled = state.aiEnabled !== undefined ? state.aiEnabled : true;
   currentGoal = state.currentGoal;
   newsFeed = state.newsFeed || [];
   gameStarted = state.gameStarted || false;
+  gamePasswordHash = state.passwordHash || null;
   
   grid = state.grid;
   
@@ -452,10 +582,12 @@ const restoreGameState = (state) => {
   
   document.getElementById('advisor-toggle').checked = aiEnabled;
   const badge = document.getElementById('start-badge-dot');
-  if (aiEnabled) {
-    badge.classList.add('active');
-  } else {
-    badge.classList.remove('active');
+  if (badge) {
+    if (aiEnabled) {
+      badge.classList.add('active');
+    } else {
+      badge.classList.remove('active');
+    }
   }
   
   // Clean all building models from scene
@@ -513,7 +645,8 @@ const exportGame = () => {
     aiEnabled,
     currentGoal,
     newsFeed,
-    gameStarted
+    gameStarted,
+    passwordHash: gamePasswordHash
   };
   
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -543,19 +676,77 @@ const importGame = (file) => {
       if (!state || !state.grid || !state.stats) {
         throw new Error("Invalid save structure");
       }
-      restoreGameState(state);
-      saveGameLocal();
-      addNewsItem({
-        id: Date.now().toString(),
-        text: currentLang === 'bm' ? "Permainan berjaya diimport!" : "Game save imported successfully!",
-        type: 'positive'
-      });
+      
+      importedStateToLoad = state;
+      if (state.passwordHash) {
+        showStartupPanel('panel-file-unlock');
+      } else {
+        showStartupPanel('panel-file-secure');
+      }
     } catch (err) {
       console.error("Import failed:", err);
       alert(currentLang === 'bm' ? "Fail simpanan tidak sah." : "Invalid save file.");
     }
   };
   reader.readAsText(file);
+};
+
+// --- Password Security Helpers ---
+const hashPassword = async (password) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const showStartupPanel = (panelId) => {
+  const panels = ['panel-unlock', 'panel-secure-old', 'panel-new-game', 'panel-file-unlock', 'panel-file-secure'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === panelId ? 'block' : 'none';
+  });
+  
+  const btnCancelNew = document.getElementById('btn-new-cancel');
+  if (btnCancelNew) {
+    btnCancelNew.style.display = pendingStateToLoad ? 'block' : 'none';
+  }
+
+  // Clear inputs and hide errors
+  const inputs = document.querySelectorAll('.start-input');
+  inputs.forEach(input => input.value = '');
+  const errors = document.querySelectorAll('.error-message');
+  errors.forEach(err => err.style.display = 'none');
+};
+
+const checkStartupSave = () => {
+  try {
+    const raw = localStorage.getItem('skymetropolis_save');
+    if (!raw) {
+      showStartupPanel('panel-new-game');
+      return;
+    }
+    const state = JSON.parse(raw);
+    if (!state || !state.grid || !state.stats) {
+      showStartupPanel('panel-new-game');
+      return;
+    }
+    
+    pendingStateToLoad = state;
+    
+    if (state.passwordHash) {
+      showStartupPanel('panel-unlock');
+    } else {
+      showStartupPanel('panel-secure-old');
+    }
+  } catch (e) {
+    console.error("Error checking startup save:", e);
+    showStartupPanel('panel-new-game');
+  }
+};
+
+const formatTime = (h, m) => {
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 };
 
 const updateUI = () => {
@@ -565,14 +756,17 @@ const updateUI = () => {
   document.getElementById('stat-money-val').innerText = stats.money.toLocaleString();
   document.getElementById('stat-pop-val').innerText = stats.population.toLocaleString();
   document.getElementById('stat-day-val').innerText = stats.day;
+  document.getElementById('stat-time-val').innerText = formatTime(stats.hour, stats.minute);
   
   document.getElementById('treasury-lbl').innerText = t.treasury;
   document.getElementById('citizens-lbl').innerText = t.citizens;
   document.getElementById('day-lbl').innerText = t.day;
+  document.getElementById('time-lbl').innerText = t.time;
   
   // Export/Import Labels
   document.getElementById('export-lbl').innerText = t.exportBtn;
-  document.getElementById('import-lbl').innerText = t.importBtn;
+  const importLbl = document.getElementById('import-lbl');
+  if (importLbl) importLbl.innerText = t.importBtn;
   
   // Toolbar labels
   document.getElementById('toolbar-label').innerText = t.build;
@@ -676,8 +870,61 @@ const setupStartScreen = () => {
   document.getElementById('start-subtitle').innerText = t.subtitle;
   document.getElementById('start-advisor-title').innerText = t.aiAdvisor;
   document.getElementById('start-advisor-desc').innerText = t.aiAdvisorDesc;
-  document.getElementById('start-btn').innerText = t.startBuilding;
   document.getElementById('created-by-lbl').innerText = `${t.createdBy} @ammaar`;
+  
+  // Set translations for unlock panel
+  document.getElementById('unlock-title').innerText = t.unlockTitle;
+  document.getElementById('unlock-desc').innerText = t.unlockDesc;
+  document.getElementById('unlock-password-lbl').innerText = t.password;
+  document.getElementById('unlock-password').placeholder = t.enterPassword;
+  document.getElementById('btn-unlock-load').innerText = t.unlockLoad;
+  document.getElementById('btn-unlock-new').innerText = t.newCity;
+  document.getElementById('btn-unlock-import').innerText = t.importSave;
+  document.getElementById('unlock-error').innerText = t.incorrectPassword;
+
+  // Set translations for secure old panel
+  document.getElementById('secure-title').innerText = t.secureTitle;
+  document.getElementById('secure-desc').innerText = t.secureDesc;
+  document.getElementById('secure-pw-lbl').innerText = t.newPassword;
+  document.getElementById('secure-password').placeholder = t.createPassword;
+  document.getElementById('secure-confirm-lbl').innerText = t.confirmPassword;
+  document.getElementById('secure-confirm').placeholder = t.confirmPasswordPlaceholder;
+  document.getElementById('btn-secure-load').innerText = t.secureLoad;
+  document.getElementById('btn-secure-new').innerText = t.newCity;
+  document.getElementById('btn-secure-import').innerText = t.importSave;
+  document.getElementById('secure-error').innerText = t.passwordMismatch;
+
+  // Set translations for new game panel
+  document.getElementById('new-title').innerText = t.newTitle;
+  document.getElementById('new-desc').innerText = t.newDesc;
+  document.getElementById('new-pw-lbl').innerText = t.password;
+  document.getElementById('new-password').placeholder = t.createPassword;
+  document.getElementById('new-confirm-lbl').innerText = t.confirmPassword;
+  document.getElementById('new-confirm').placeholder = t.confirmPasswordPlaceholder;
+  document.getElementById('btn-create-start').innerText = t.createStart;
+  document.getElementById('btn-new-cancel').innerText = t.back;
+  document.getElementById('btn-new-import').innerText = t.importSave;
+  document.getElementById('new-error').innerText = t.passwordMismatch;
+
+  // Set translations for file unlock panel
+  document.getElementById('file-unlock-title').innerText = t.fileUnlockTitle;
+  document.getElementById('file-unlock-desc').innerText = t.fileUnlockDesc;
+  document.getElementById('file-unlock-password-lbl').innerText = t.password;
+  document.getElementById('file-unlock-password').placeholder = t.enterPassword;
+  document.getElementById('btn-file-unlock-load').innerText = t.unlockImport;
+  document.getElementById('btn-file-unlock-cancel').innerText = t.cancel;
+  document.getElementById('file-unlock-error').innerText = t.incorrectPassword;
+
+  // Set translations for file secure panel
+  document.getElementById('file-secure-title').innerText = t.fileSecureTitle;
+  document.getElementById('file-secure-desc').innerText = t.fileSecureDesc;
+  document.getElementById('file-secure-pw-lbl').innerText = t.password;
+  document.getElementById('file-secure-pw').placeholder = t.createPassword;
+  document.getElementById('file-secure-confirm-lbl').innerText = t.confirmPassword;
+  document.getElementById('file-secure-confirm').placeholder = t.confirmPasswordPlaceholder;
+  document.getElementById('btn-file-secure-load').innerText = t.secureImport;
+  document.getElementById('btn-file-secure-cancel').innerText = t.cancel;
+  document.getElementById('file-secure-error').innerText = t.passwordMismatch;
 };
 
 
@@ -709,16 +956,29 @@ const initGameLoop = () => {
   gameIntervalId = setInterval(() => {
     if (!gameStarted) return;
     
-    // Calculate income & population growth
-    let dailyIncome = 0;
-    let dailyPopGrowth = 0;
+    // 1. Advance Game Time: 1 second real time = 1 minute game time
+    stats.minute += 1;
+    let hourPassed = false;
+    if (stats.minute >= 60) {
+      stats.minute = 0;
+      stats.hour += 1;
+      hourPassed = true;
+      if (stats.hour >= 24) {
+        stats.hour = 0;
+        stats.day += 1;
+      }
+    }
+    
+    // 2. Calculate building counts
+    let hourlyIncome = 0;
+    let hourlyPopGrowth = 0;
     let buildingCounts = {};
     
     grid.flat().forEach(tile => {
       if (tile.buildingType !== BuildingType.None) {
         const config = BUILDINGS[tile.buildingType];
-        dailyIncome += config.incomeGen;
-        dailyPopGrowth += config.popGen;
+        hourlyIncome += config.incomeGen;
+        hourlyPopGrowth += config.popGen;
         buildingCounts[tile.buildingType] = (buildingCounts[tile.buildingType] || 0) + 1;
       }
     });
@@ -726,15 +986,20 @@ const initGameLoop = () => {
     const resCount = buildingCounts[BuildingType.Residential] || 0;
     const maxPop = resCount * 50; // Cap
     
-    let newPop = stats.population + dailyPopGrowth;
-    if (newPop > maxPop) newPop = maxPop;
-    if (resCount === 0 && stats.population > 0) newPop = Math.max(0, stats.population - 5);
+    // 3. Hourly Payout (when hour changes)
+    if (hourPassed) {
+      let newPop = stats.population + hourlyPopGrowth;
+      if (newPop > maxPop) newPop = maxPop;
+      if (resCount === 0 && stats.population > 0) newPop = Math.max(0, stats.population - 5);
+      
+      stats.money += hourlyIncome;
+      stats.population = newPop;
+      
+      triggerNewsFeed();
+      saveGameLocal();
+    }
     
-    stats.money += dailyIncome;
-    stats.population = newPop;
-    stats.day += 1;
-    
-    // Verify current goal
+    // 4. Verify current goal (every second for maximum responsiveness)
     if (aiEnabled && currentGoal && !currentGoal.completed) {
       let isMet = false;
       if (currentGoal.targetType === 'money' && stats.money >= currentGoal.targetValue) isMet = true;
@@ -754,16 +1019,11 @@ const initGameLoop = () => {
       }
     }
     
-    triggerNewsFeed();
+    // 5. Update UI & Systems (every second)
     updateUI();
-    
-    // Update active systems
     updateTrafficAndCitizensCount();
     
-    // Auto-Save
-    saveGameLocal();
-    
-  }, TICK_RATE_MS);
+  }, 1000); // 1 second interval
 };
 
 // Dynamically scales active visual cars/agents based on roads/population
@@ -834,6 +1094,9 @@ const handleTileClick = (x, y) => {
 
 const handleClaimReward = () => {
   if (currentGoal && currentGoal.completed) {
+    const rewardBtn = document.getElementById('claim-reward-btn');
+    if (rewardBtn) rewardBtn.disabled = true;
+    
     stats.money += currentGoal.reward;
     addNewsItem({
       id: Date.now().toString(),
@@ -957,7 +1220,7 @@ const init3D = () => {
   initGrid();
   
   // Try to load auto-save
-  loadGameLocal();
+  checkStartupSave();
   
   // Loop
   animate();
@@ -1825,39 +2088,238 @@ document.addEventListener('DOMContentLoaded', () => {
   // Claim Reward button click
   document.getElementById('claim-reward-btn').addEventListener('click', handleClaimReward);
   
-  // Export/Import Save Game
+  // Export Save Game
   document.getElementById('export-btn').addEventListener('click', exportGame);
-  document.getElementById('import-btn').addEventListener('click', () => {
-    document.getElementById('import-file-input').click();
-  });
   document.getElementById('import-file-input').addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
       importGame(e.target.files[0]);
     }
   });
   
-  // Start game button trigger
-  document.getElementById('start-btn').addEventListener('click', () => {
+  // Game session triggers and password screen button listeners
+  const startGameSession = () => {
     gameStarted = true;
-    
-    // Hide Start Overlay & Reveal HUD Overlay
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('hud-overlay').style.display = 'flex';
     
-    // Log complete terrain initialization
     addNewsItem({
       id: Date.now().toString(),
       text: TRANSLATIONS[currentLang].terrainComplete,
       type: 'positive'
     });
     
-    // Start quest goals and loop stats triggers
     updateUI();
     if (aiEnabled) {
       startGoalGenerator();
     }
     initGameLoop();
+  };
+
+  document.getElementById('btn-unlock-load').addEventListener('click', async () => {
+    const pw = document.getElementById('unlock-password').value;
+    const errorEl = document.getElementById('unlock-error');
+    if (!pw) {
+      errorEl.innerText = currentLang === 'bm' ? "Sila masukkan kata laluan." : "Please enter password.";
+      errorEl.style.display = 'block';
+      return;
+    }
+    const isCorrect = await checkPassword(pw, pendingStateToLoad.passwordHash);
+    if (isCorrect) {
+      gamePasswordHash = pendingStateToLoad.passwordHash;
+      restoreGameState(pendingStateToLoad);
+      startGameSession();
+    } else {
+      errorEl.innerText = TRANSLATIONS[currentLang].incorrectPassword;
+      errorEl.style.display = 'block';
+    }
   });
+
+  document.getElementById('btn-unlock-new').addEventListener('click', () => {
+    const confirmMsg = TRANSLATIONS[currentLang].overwriteWarning;
+    if (confirm(confirmMsg)) {
+      showStartupPanel('panel-new-game');
+    }
+  });
+
+  document.getElementById('btn-unlock-import').addEventListener('click', () => {
+    document.getElementById('import-file-input').click();
+  });
+
+  document.getElementById('btn-secure-load').addEventListener('click', async () => {
+    const pw = document.getElementById('secure-password').value;
+    const confirmPw = document.getElementById('secure-confirm').value;
+    const errorEl = document.getElementById('secure-error');
+    
+    if (!pw || pw.length < 3) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (pw !== confirmPw) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    const hash = await hashPassword(pw);
+    pendingStateToLoad.passwordHash = hash;
+    gamePasswordHash = hash;
+    restoreGameState(pendingStateToLoad);
+    saveGameLocal();
+    startGameSession();
+  });
+
+  document.getElementById('btn-secure-new').addEventListener('click', () => {
+    const confirmMsg = TRANSLATIONS[currentLang].overwriteWarning;
+    if (confirm(confirmMsg)) {
+      showStartupPanel('panel-new-game');
+    }
+  });
+
+  document.getElementById('btn-secure-import').addEventListener('click', () => {
+    document.getElementById('import-file-input').click();
+  });
+
+  document.getElementById('btn-create-start').addEventListener('click', async () => {
+    const pw = document.getElementById('new-password').value;
+    const confirmPw = document.getElementById('new-confirm').value;
+    const errorEl = document.getElementById('new-error');
+    
+    if (!pw || pw.length < 3) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (pw !== confirmPw) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    const hash = await hashPassword(pw);
+    gamePasswordHash = hash;
+    
+    // Reset stats & game grid
+    stats = {
+      money: INITIAL_MONEY,
+      population: 0,
+      day: 1,
+      hour: 0,
+      minute: 0
+    };
+    
+    Object.keys(buildingGroups).forEach(key => {
+      scene.remove(buildingGroups[key]);
+    });
+    buildingGroups = {};
+    
+    grid = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+      const row = [];
+      for (let x = 0; x < GRID_SIZE; x++) {
+        row.push({ x, y, buildingType: BuildingType.None });
+      }
+      grid.push(row);
+    }
+    
+    grid.forEach(row => row.forEach(tile => {
+      updateTileMesh(tile.x, tile.y, tile.buildingType);
+    }));
+    
+    newsFeed = [];
+    const newsBody = document.getElementById('news-body');
+    if (newsBody) {
+      newsBody.innerHTML = `<div class="news-item neutral">${TRANSLATIONS[currentLang].terrainComplete}</div>`;
+    }
+    
+    saveGameLocal();
+    startGameSession();
+  });
+
+  document.getElementById('btn-new-cancel').addEventListener('click', () => {
+    if (pendingStateToLoad) {
+      if (pendingStateToLoad.passwordHash) {
+        showStartupPanel('panel-unlock');
+      } else {
+        showStartupPanel('panel-secure-old');
+      }
+    } else {
+      showStartupPanel('panel-new-game');
+    }
+  });
+
+  document.getElementById('btn-new-import').addEventListener('click', () => {
+    document.getElementById('import-file-input').click();
+  });
+
+  document.getElementById('btn-file-unlock-load').addEventListener('click', async () => {
+    const pw = document.getElementById('file-unlock-password').value;
+    const errorEl = document.getElementById('file-unlock-error');
+    if (!pw) {
+      errorEl.innerText = currentLang === 'bm' ? "Sila masukkan kata laluan." : "Please enter password.";
+      errorEl.style.display = 'block';
+      return;
+    }
+    const isCorrect = await checkPassword(pw, importedStateToLoad.passwordHash);
+    if (isCorrect) {
+      gamePasswordHash = importedStateToLoad.passwordHash;
+      restoreGameState(importedStateToLoad);
+      saveGameLocal();
+      startGameSession();
+      addNewsItem({
+        id: Date.now().toString(),
+        text: currentLang === 'bm' ? "Permainan berjaya diimport!" : "Game save imported successfully!",
+        type: 'positive'
+      });
+    } else {
+      errorEl.innerText = TRANSLATIONS[currentLang].incorrectPassword;
+      errorEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('btn-file-unlock-cancel').addEventListener('click', () => {
+    importedStateToLoad = null;
+    checkStartupSave();
+  });
+
+  document.getElementById('btn-file-secure-load').addEventListener('click', async () => {
+    const pw = document.getElementById('file-secure-pw').value;
+    const confirmPw = document.getElementById('file-secure-confirm').value;
+    const errorEl = document.getElementById('file-secure-error');
+    
+    if (!pw || pw.length < 3) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (pw !== confirmPw) {
+      errorEl.innerText = TRANSLATIONS[currentLang].passwordMismatch;
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    const hash = await hashPassword(pw);
+    importedStateToLoad.passwordHash = hash;
+    gamePasswordHash = hash;
+    restoreGameState(importedStateToLoad);
+    saveGameLocal();
+    startGameSession();
+    addNewsItem({
+      id: Date.now().toString(),
+      text: currentLang === 'bm' ? "Permainan berjaya diimport!" : "Game save imported successfully!",
+      type: 'positive'
+    });
+  });
+
+  document.getElementById('btn-file-secure-cancel').addEventListener('click', () => {
+    importedStateToLoad = null;
+    checkStartupSave();
+  });
+  
+  const checkPassword = async (password, storedHash) => {
+    const hash = await hashPassword(password);
+    return hash === storedHash;
+  };
   
   // Bind Toolbar Buttons
   Object.keys(BUILDINGS).forEach(type => {
