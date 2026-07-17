@@ -280,7 +280,7 @@ let importedStateToLoad = null;
 
 // Base64 obfuscated URL to keep your Google Sheet URL hidden in the source code.
 // To generate this, run `btoa("https://script.google.com/...")` in your browser console and paste the string below.
-const OBFUSCATED_CLOUD_URL = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J6MGRVYkNFRlRLVFpyRklwWmR0VW1MSVgxSUtfMEt5ZTNqNGFVVGlZQ2dYb3NRZnQ0VGg3OG5XNDhoNU5Ud09oM0wvZXhlYw==";
+const OBFUSCATED_CLOUD_URL = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3MvbGlicmFyeS9kLzF5c0VqbnJ1VkRMWUN4bkdTaGhoTU9DeC02NTJMTmljLUl6ZGZVSUxpa212ZWRKaDBycGswOXVkTS8y";
 
 let appsScriptUrl = localStorage.getItem('skymetropolis_apps_script_url') || "";
 if (!appsScriptUrl && OBFUSCATED_CLOUD_URL) {
