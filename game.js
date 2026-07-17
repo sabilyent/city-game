@@ -107,6 +107,8 @@ const TRANSLATIONS = {
     cityFeed: "City Feed",
     noNews: "No active news stream.",
     build: "Build",
+    exportBtn: "Export",
+    importBtn: "Import",
   },
   bm: {
     title: "SkyMetropolis",
@@ -131,6 +133,8 @@ const TRANSLATIONS = {
     cityFeed: "Suapan Bandar",
     noNews: "Tiada suapan berita aktif.",
     build: "Bina",
+    exportBtn: "Eksport",
+    importBtn: "Import",
   }
 };
 
@@ -173,6 +177,7 @@ let previewGroup = null;
 let cursorMesh = null;
 let clickStartX = 0;
 let clickStartY = 0;
+let gameIntervalId = null;
 
 // Helper to map coordinates
 const gridToWorld = (x, y) => [x - worldOffset, 0, y - worldOffset];
@@ -408,6 +413,151 @@ const addNewsItem = (item) => {
   newsBody.scrollTop = newsBody.scrollHeight;
 };
 
+// --- Save/Load and Export/Import Logic ---
+const saveGameLocal = () => {
+  const state = {
+    stats,
+    grid,
+    currentLang,
+    aiEnabled,
+    currentGoal,
+    newsFeed,
+    gameStarted
+  };
+  localStorage.setItem('skymetropolis_save', JSON.stringify(state));
+};
+
+const restoreGameState = (state) => {
+  stats = state.stats;
+  currentLang = state.currentLang || 'en';
+  aiEnabled = state.aiEnabled !== undefined ? state.aiEnabled : true;
+  currentGoal = state.currentGoal;
+  newsFeed = state.newsFeed || [];
+  gameStarted = state.gameStarted || false;
+  
+  grid = state.grid;
+  
+  // Set UI controls
+  if (currentLang === 'bm') {
+    document.getElementById('hud-lang-bm').classList.add('active');
+    document.getElementById('hud-lang-en').classList.remove('active');
+    document.getElementById('start-lang-bm').classList.add('active');
+    document.getElementById('start-lang-en').classList.remove('active');
+  } else {
+    document.getElementById('hud-lang-en').classList.add('active');
+    document.getElementById('hud-lang-bm').classList.remove('active');
+    document.getElementById('start-lang-en').classList.add('active');
+    document.getElementById('start-lang-bm').classList.remove('active');
+  }
+  
+  document.getElementById('advisor-toggle').checked = aiEnabled;
+  const badge = document.getElementById('start-badge-dot');
+  if (aiEnabled) {
+    badge.classList.add('active');
+  } else {
+    badge.classList.remove('active');
+  }
+  
+  // Clean all building models from scene
+  Object.keys(buildingGroups).forEach(key => {
+    scene.remove(buildingGroups[key]);
+  });
+  buildingGroups = {};
+  
+  // Re-build all tile meshes
+  grid.forEach(row => row.forEach(tile => {
+    updateTileMesh(tile.x, tile.y, tile.buildingType);
+  }));
+  
+  if (gameStarted) {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('hud-overlay').style.display = 'flex';
+    initGameLoop();
+  }
+  
+  updateUI();
+  
+  // Restore news feed DOM logs
+  const newsBody = document.getElementById('news-body');
+  if (newsBody && newsFeed.length > 0) {
+    newsBody.innerHTML = '';
+    newsFeed.forEach(n => {
+      const div = document.createElement('div');
+      div.className = `news-item ${n.type}`;
+      div.innerText = n.text;
+      newsBody.appendChild(div);
+    });
+    newsBody.scrollTop = newsBody.scrollHeight;
+  }
+};
+
+const loadGameLocal = () => {
+  try {
+    const raw = localStorage.getItem('skymetropolis_save');
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    if (!state || !state.grid || !state.stats) return false;
+    restoreGameState(state);
+    return true;
+  } catch (e) {
+    console.error("Failed to load local save:", e);
+    return false;
+  }
+};
+
+const exportGame = () => {
+  const state = {
+    stats,
+    grid,
+    currentLang,
+    aiEnabled,
+    currentGoal,
+    newsFeed,
+    gameStarted
+  };
+  
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `skymetropolis-save-${stats.day}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  addNewsItem({
+    id: Date.now().toString(),
+    text: currentLang === 'bm' ? "Permainan berjaya dieksport!" : "Game save exported successfully!",
+    type: 'positive'
+  });
+};
+
+const importGame = (file) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const state = JSON.parse(e.target.result);
+      if (!state || !state.grid || !state.stats) {
+        throw new Error("Invalid save structure");
+      }
+      restoreGameState(state);
+      saveGameLocal();
+      addNewsItem({
+        id: Date.now().toString(),
+        text: currentLang === 'bm' ? "Permainan berjaya diimport!" : "Game save imported successfully!",
+        type: 'positive'
+      });
+    } catch (err) {
+      console.error("Import failed:", err);
+      alert(currentLang === 'bm' ? "Fail simpanan tidak sah." : "Invalid save file.");
+    }
+  };
+  reader.readAsText(file);
+};
+
 const updateUI = () => {
   const t = TRANSLATIONS[currentLang];
   
@@ -419,6 +569,10 @@ const updateUI = () => {
   document.getElementById('treasury-lbl').innerText = t.treasury;
   document.getElementById('citizens-lbl').innerText = t.citizens;
   document.getElementById('day-lbl').innerText = t.day;
+  
+  // Export/Import Labels
+  document.getElementById('export-lbl').innerText = t.exportBtn;
+  document.getElementById('import-lbl').innerText = t.importBtn;
   
   // Toolbar labels
   document.getElementById('toolbar-label').innerText = t.build;
@@ -551,7 +705,8 @@ const triggerNewsFeed = async () => {
 };
 
 const initGameLoop = () => {
-  setInterval(() => {
+  if (gameIntervalId) clearInterval(gameIntervalId);
+  gameIntervalId = setInterval(() => {
     if (!gameStarted) return;
     
     // Calculate income & population growth
@@ -605,6 +760,9 @@ const initGameLoop = () => {
     // Update active systems
     updateTrafficAndCitizensCount();
     
+    // Auto-Save
+    saveGameLocal();
+    
   }, TICK_RATE_MS);
 };
 
@@ -643,6 +801,7 @@ const handleTileClick = (x, y) => {
         tile.buildingType = BuildingType.None;
         updateTileMesh(x, y, BuildingType.None);
         updateUI();
+        saveGameLocal();
       } else {
         addNewsItem({
           id: Date.now().toString(),
@@ -661,6 +820,7 @@ const handleTileClick = (x, y) => {
       tile.buildingType = tool;
       updateTileMesh(x, y, tool);
       updateUI();
+      saveGameLocal();
     } else {
       const localizedName = currentLang === 'bm' ? buildingConfig.nameBm : buildingConfig.name;
       addNewsItem({
@@ -683,6 +843,7 @@ const handleClaimReward = () => {
     currentGoal = null;
     updateUI();
     startGoalGenerator();
+    saveGameLocal();
   }
 };
 
@@ -794,6 +955,9 @@ const init3D = () => {
   // Initialize dynamic sub-systems
   initEnvironment();
   initGrid();
+  
+  // Try to load auto-save
+  loadGameLocal();
   
   // Loop
   animate();
@@ -1660,6 +1824,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Claim Reward button click
   document.getElementById('claim-reward-btn').addEventListener('click', handleClaimReward);
+  
+  // Export/Import Save Game
+  document.getElementById('export-btn').addEventListener('click', exportGame);
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-file-input').click();
+  });
+  document.getElementById('import-file-input').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      importGame(e.target.files[0]);
+    }
+  });
   
   // Start game button trigger
   document.getElementById('start-btn').addEventListener('click', () => {
