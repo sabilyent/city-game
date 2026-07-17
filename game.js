@@ -1284,6 +1284,20 @@ const initGameLoop = () => {
       if (stats.hour >= 24) {
         stats.hour = 0;
         stats.day += 1;
+
+        // demographic rule: people die 2% every 120 days (rounded to nearest integer)
+        if (stats.day > 0 && stats.day % 120 === 0) {
+          const deaths = Math.round(stats.population * 0.02);
+          stats.population = Math.max(0, stats.population - deaths);
+
+          addNewsItem({
+            id: Date.now().toString(),
+            text: currentLang === 'bm'
+              ? `Krisis Kematian: Jumlah penduduk berkurang sebanyak ${deaths} orang (2%) pada hari ke-${stats.day}!`
+              : `Demographic Crisis: Population decreased by ${deaths} citizens (2%) on day ${stats.day}!`,
+            type: 'negative'
+          });
+        }
       }
     }
 
