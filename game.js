@@ -204,7 +204,7 @@ const TRANSLATIONS = {
 let currentLang = 'en';
 let gameStarted = false;
 let aiEnabled = true;
-let gamePasswordHash = null;
+let sessionPassword = "";
 let pendingStateToLoad = null;
 let importedStateToLoad = null;
 
@@ -538,8 +538,77 @@ const addNewsItem = (item) => {
   newsBody.scrollTop = newsBody.scrollHeight;
 };
 
+// --- Cryptographic Security Helpers (AES-GCM) ---
+const bufToHex = (buf) => {
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+};
+
+const hexToBuf = (hex) => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes.buffer;
+};
+
+const deriveKey = async (password, salt) => {
+  const encoder = new TextEncoder();
+  const pwData = encoder.encode(password + salt);
+  const hash = await crypto.subtle.digest('SHA-256', pwData);
+  return crypto.subtle.importKey(
+    'raw',
+    hash,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+const encryptData = async (plainText, password) => {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(8));
+  const ivBytes = crypto.getRandomValues(new Uint8Array(12));
+  const salt = bufToHex(saltBytes);
+  const iv = bufToHex(ivBytes);
+  
+  const key = await deriveKey(password, salt);
+  const encoder = new TextEncoder();
+  const plainBytes = encoder.encode(plainText);
+  
+  const cipherBuffer = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: ivBytes },
+    key,
+    plainBytes
+  );
+  
+  return {
+    version: "1.1",
+    salt,
+    iv,
+    ciphertext: bufToHex(cipherBuffer)
+  };
+};
+
+const decryptData = async (encryptedObj, password) => {
+  const { salt, iv, ciphertext } = encryptedObj;
+  const ivBytes = hexToBuf(iv);
+  const cipherBytes = hexToBuf(ciphertext);
+  
+  const key = await deriveKey(password, salt);
+  const plainBuffer = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: ivBytes },
+    key,
+    cipherBytes
+  );
+  
+  const decoder = new TextDecoder();
+  return decoder.decode(plainBuffer);
+};
+
 // // --- Save/Load and Export/Import Logic ---
-const saveGameLocal = () => {
+const saveGameLocal = async () => {
+  if (!sessionPassword) return;
   const state = {
     stats,
     grid,
@@ -547,10 +616,15 @@ const saveGameLocal = () => {
     aiEnabled,
     currentGoal,
     newsFeed,
-    gameStarted,
-    passwordHash: gamePasswordHash
+    gameStarted
   };
-  localStorage.setItem('skymetropolis_save', JSON.stringify(state));
+  try {
+    const plainText = JSON.stringify(state);
+    const encrypted = await encryptData(plainText, sessionPassword);
+    localStorage.setItem('skymetropolis_save', JSON.stringify(encrypted));
+  } catch (e) {
+    console.error("Failed to auto-save locally:", e);
+  }
 };
 
 const restoreGameState = (state) => {
@@ -563,7 +637,6 @@ const restoreGameState = (state) => {
   currentGoal = state.currentGoal;
   newsFeed = state.newsFeed || [];
   gameStarted = state.gameStarted || false;
-  gamePasswordHash = state.passwordHash || null;
   
   grid = state.grid;
   
@@ -624,20 +697,12 @@ const restoreGameState = (state) => {
 };
 
 const loadGameLocal = () => {
-  try {
-    const raw = localStorage.getItem('skymetropolis_save');
-    if (!raw) return false;
-    const state = JSON.parse(raw);
-    if (!state || !state.grid || !state.stats) return false;
-    restoreGameState(state);
-    return true;
-  } catch (e) {
-    console.error("Failed to load local save:", e);
-    return false;
-  }
+  // Deprecated in favor of checkStartupSave, but left as stub
+  return false;
 };
 
-const exportGame = () => {
+const exportGame = async () => {
+  if (!sessionPassword) return;
   const state = {
     stats,
     grid,
@@ -645,26 +710,33 @@ const exportGame = () => {
     aiEnabled,
     currentGoal,
     newsFeed,
-    gameStarted,
-    passwordHash: gamePasswordHash
+    gameStarted
   };
   
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `skymetropolis-save-${stats.day}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  
-  addNewsItem({
-    id: Date.now().toString(),
-    text: currentLang === 'bm' ? "Permainan berjaya dieksport!" : "Game save exported successfully!",
-    type: 'positive'
-  });
+  try {
+    const plainText = JSON.stringify(state);
+    const encrypted = await encryptData(plainText, sessionPassword);
+    
+    const blob = new Blob([JSON.stringify(encrypted, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `skymetropolis-save-${stats.day}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addNewsItem({
+      id: Date.now().toString(),
+      text: currentLang === 'bm' ? "Permainan berjaya dieksport!" : "Game save exported successfully!",
+      type: 'positive'
+    });
+  } catch (e) {
+    console.error("Export failed:", e);
+    alert(currentLang === 'bm' ? "Eksport gagal." : "Export failed.");
+  }
 };
 
 const importGame = (file) => {
@@ -673,15 +745,17 @@ const importGame = (file) => {
   reader.onload = (e) => {
     try {
       const state = JSON.parse(e.target.result);
-      if (!state || !state.grid || !state.stats) {
+      if (!state) {
         throw new Error("Invalid save structure");
       }
       
       importedStateToLoad = state;
-      if (state.passwordHash) {
+      if (state.ciphertext) {
         showStartupPanel('panel-file-unlock');
-      } else {
+      } else if (state.grid && state.stats) {
         showStartupPanel('panel-file-secure');
+      } else {
+        throw new Error("Invalid save structure");
       }
     } catch (err) {
       console.error("Import failed:", err);
@@ -689,15 +763,6 @@ const importGame = (file) => {
     }
   };
   reader.readAsText(file);
-};
-
-// --- Password Security Helpers ---
-const hashPassword = async (password) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 const showStartupPanel = (panelId) => {
@@ -727,17 +792,19 @@ const checkStartupSave = () => {
       return;
     }
     const state = JSON.parse(raw);
-    if (!state || !state.grid || !state.stats) {
+    if (!state) {
       showStartupPanel('panel-new-game');
       return;
     }
     
-    pendingStateToLoad = state;
-    
-    if (state.passwordHash) {
+    if (state.ciphertext) {
+      pendingStateToLoad = state;
       showStartupPanel('panel-unlock');
-    } else {
+    } else if (state.grid && state.stats) {
+      pendingStateToLoad = state;
       showStartupPanel('panel-secure-old');
+    } else {
+      showStartupPanel('panel-new-game');
     }
   } catch (e) {
     console.error("Error checking startup save:", e);
@@ -2123,12 +2190,18 @@ document.addEventListener('DOMContentLoaded', () => {
       errorEl.style.display = 'block';
       return;
     }
-    const isCorrect = await checkPassword(pw, pendingStateToLoad.passwordHash);
-    if (isCorrect) {
-      gamePasswordHash = pendingStateToLoad.passwordHash;
-      restoreGameState(pendingStateToLoad);
+    
+    try {
+      const decryptedText = await decryptData(pendingStateToLoad, pw);
+      const state = JSON.parse(decryptedText);
+      if (!state || !state.grid || !state.stats) {
+        throw new Error("Invalid state structure");
+      }
+      sessionPassword = pw;
+      restoreGameState(state);
       startGameSession();
-    } else {
+    } catch (err) {
+      console.error("Decryption failed:", err);
       errorEl.innerText = TRANSLATIONS[currentLang].incorrectPassword;
       errorEl.style.display = 'block';
     }
@@ -2161,11 +2234,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const hash = await hashPassword(pw);
-    pendingStateToLoad.passwordHash = hash;
-    gamePasswordHash = hash;
+    sessionPassword = pw;
     restoreGameState(pendingStateToLoad);
-    saveGameLocal();
+    await saveGameLocal();
     startGameSession();
   });
 
@@ -2196,8 +2267,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const hash = await hashPassword(pw);
-    gamePasswordHash = hash;
+    sessionPassword = pw;
     
     // Reset stats & game grid
     stats = {
@@ -2232,13 +2302,13 @@ document.addEventListener('DOMContentLoaded', () => {
       newsBody.innerHTML = `<div class="news-item neutral">${TRANSLATIONS[currentLang].terrainComplete}</div>`;
     }
     
-    saveGameLocal();
+    await saveGameLocal();
     startGameSession();
   });
 
   document.getElementById('btn-new-cancel').addEventListener('click', () => {
     if (pendingStateToLoad) {
-      if (pendingStateToLoad.passwordHash) {
+      if (pendingStateToLoad.ciphertext) {
         showStartupPanel('panel-unlock');
       } else {
         showStartupPanel('panel-secure-old');
@@ -2260,18 +2330,24 @@ document.addEventListener('DOMContentLoaded', () => {
       errorEl.style.display = 'block';
       return;
     }
-    const isCorrect = await checkPassword(pw, importedStateToLoad.passwordHash);
-    if (isCorrect) {
-      gamePasswordHash = importedStateToLoad.passwordHash;
-      restoreGameState(importedStateToLoad);
-      saveGameLocal();
+    
+    try {
+      const decryptedText = await decryptData(importedStateToLoad, pw);
+      const state = JSON.parse(decryptedText);
+      if (!state || !state.grid || !state.stats) {
+        throw new Error("Invalid state structure");
+      }
+      sessionPassword = pw;
+      restoreGameState(state);
+      await saveGameLocal();
       startGameSession();
       addNewsItem({
         id: Date.now().toString(),
         text: currentLang === 'bm' ? "Permainan berjaya diimport!" : "Game save imported successfully!",
         type: 'positive'
       });
-    } else {
+    } catch (err) {
+      console.error("Import decryption failed:", err);
       errorEl.innerText = TRANSLATIONS[currentLang].incorrectPassword;
       errorEl.style.display = 'block';
     }
@@ -2298,11 +2374,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    const hash = await hashPassword(pw);
-    importedStateToLoad.passwordHash = hash;
-    gamePasswordHash = hash;
+    sessionPassword = pw;
     restoreGameState(importedStateToLoad);
-    saveGameLocal();
+    await saveGameLocal();
     startGameSession();
     addNewsItem({
       id: Date.now().toString(),
@@ -2315,11 +2389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     importedStateToLoad = null;
     checkStartupSave();
   });
-  
-  const checkPassword = async (password, storedHash) => {
-    const hash = await hashPassword(password);
-    return hash === storedHash;
-  };
   
   // Bind Toolbar Buttons
   Object.keys(BUILDINGS).forEach(type => {
