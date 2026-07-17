@@ -174,7 +174,16 @@ const TRANSLATIONS = {
     savedLabel: "Saved",
     useCloud: "Use Cloud",
     keepLocal: "Keep Local",
-    sync: "Sync"
+    sync: "Sync",
+    mayorSettingsTitle: "Mayor Settings",
+    changePasswordSection: "Change Password",
+    currentPasswordLabel: "Current Password",
+    newPasswordLabel: "New Password",
+    confirmNewPasswordLabel: "Confirm New Password",
+    updatePasswordBtn: "Update Password",
+    passwordChangedSuccess: "Password changed successfully!",
+    incorrectCurrentPassword: "Current password is incorrect.",
+    passwordTooShort: "Password must be at least 3 characters."
   },
   bm: {
     title: "SkyMetropolis",
@@ -266,7 +275,16 @@ const TRANSLATIONS = {
     savedLabel: "Disimpan",
     useCloud: "Guna Awan",
     keepLocal: "Kekal Tempatan",
-    sync: "Selaras"
+    sync: "Selaras",
+    mayorSettingsTitle: "Tetapan Datuk Bandar",
+    changePasswordSection: "Tukar Kata Laluan",
+    currentPasswordLabel: "Kata Laluan Semasa",
+    newPasswordLabel: "Kata Laluan Baru",
+    confirmNewPasswordLabel: "Sahkan Kata Laluan Baru",
+    updatePasswordBtn: "Kemas Kini Kata Laluan",
+    passwordChangedSuccess: "Kata laluan berjaya ditukar!",
+    incorrectCurrentPassword: "Kata laluan semasa salah.",
+    passwordTooShort: "Kata laluan mesti sekurang-kurangnya 3 aksara."
   }
 };
 
@@ -710,23 +728,39 @@ const saveGameLocal = async () => {
     timestamp: Date.now()
   };
   try {
+    state.checksum = await generateStateChecksum(state, sessionPassword);
     const plainText = JSON.stringify(state);
     const encrypted = await encryptData(plainText, sessionPassword);
+    
+    const passwordHash = await getPasswordHash(sessionPassword);
     const outerSave = {
       ...encrypted,
       username: stats.username,
-      timestamp: state.timestamp
+      timestamp: state.timestamp,
+      secureHash: await computeSecureHash(stats.population, stats.money, passwordHash, state.timestamp)
     };
     localStorage.setItem('skymetropolis_save', JSON.stringify(outerSave));
-
-    // Trigger sync in background
-    syncWithCloud().catch(err => console.error("Auto sync failed:", err));
   } catch (e) {
     console.error("Failed to auto-save locally:", e);
   }
 };
 
-const restoreGameState = (state) => {
+const restoreGameState = async (state) => {
+  if (state.checksum) {
+    try {
+      const computed = await generateStateChecksum(state, sessionPassword);
+      if (state.checksum !== computed) {
+        alert(currentLang === 'bm' 
+          ? "Ralat: Fail simpanan dikesan telah diubah suai secara tidak sah!" 
+          : "Error: Save data detected as modified or corrupted!");
+        throw new Error("Save data checksum mismatch");
+      }
+    } catch (err) {
+      console.error("Integrity check error:", err);
+      return;
+    }
+  }
+
   stats = state.stats;
   if (stats.hour === undefined) stats.hour = 0;
   if (stats.minute === undefined) stats.minute = 0;
@@ -1094,6 +1128,40 @@ const updateUI = () => {
       btn.classList.remove('active');
     }
   });
+
+  // Update Mayor Profile widget
+  const mayorNameLbl = document.getElementById('mayor-name-lbl');
+  if (mayorNameLbl) {
+    mayorNameLbl.innerText = stats.username || "Mayor";
+  }
+
+  const mayorAvatar = document.getElementById('mayor-avatar');
+  const mayorAvatarPlaceholder = document.getElementById('mayor-avatar-placeholder');
+  if (mayorAvatar && mayorAvatarPlaceholder) {
+    if (stats.profilePic) {
+      mayorAvatar.src = stats.profilePic;
+      mayorAvatar.style.display = 'block';
+      mayorAvatarPlaceholder.style.display = 'none';
+    } else {
+      mayorAvatar.style.display = 'none';
+      mayorAvatarPlaceholder.style.display = 'flex';
+      mayorAvatarPlaceholder.innerText = stats.username ? stats.username.charAt(0).toUpperCase() : "M";
+    }
+  }
+
+  // Update Mayor Settings Modal translations
+  const modalMayorSettingsTitle = document.getElementById('modal-mayor-settings-title');
+  if (modalMayorSettingsTitle) modalMayorSettingsTitle.innerText = t.mayorSettingsTitle || "Mayor Settings";
+  const changePwSectionTitle = document.getElementById('change-pw-section-title');
+  if (changePwSectionTitle) changePwSectionTitle.innerText = t.changePasswordSection || "Change Password";
+  const changePwCurrLbl = document.getElementById('change-pw-curr-lbl');
+  if (changePwCurrLbl) changePwCurrLbl.innerText = t.currentPasswordLabel || "Current Password";
+  const changePwNewLbl = document.getElementById('change-pw-new-lbl');
+  if (changePwNewLbl) changePwNewLbl.innerText = t.newPasswordLabel || "New Password";
+  const changePwConfLbl = document.getElementById('change-pw-conf-lbl');
+  if (changePwConfLbl) changePwConfLbl.innerText = t.confirmNewPasswordLabel || "Confirm New Password";
+  const btnSubmitChangePw = document.getElementById('btn-submit-change-pw');
+  if (btnSubmitChangePw) btnSubmitChangePw.innerText = t.updatePasswordBtn || "Update Password";
 };
 
 const setupStartScreen = () => {
@@ -2294,6 +2362,24 @@ const getPasswordHash = async (password) => {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
+const generateStateChecksum = async (state, password) => {
+  const dataStr = `${state.stats.population}|${state.stats.money}|${JSON.stringify(state.grid)}|${password}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(dataStr);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const computeSecureHash = async (population, money, passwordHash, timestamp) => {
+  const dataString = `${population}|${money}|${passwordHash}|${timestamp}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(dataString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 const updateSyncStatusUI = (status, time = lastSyncTime, errMsg = "") => {
   const t = TRANSLATIONS[currentLang];
   const statusValEl = document.getElementById('sync-status-val');
@@ -2661,7 +2747,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const state = JSON.parse(decryptedText);
 
           sessionPassword = pw;
-          restoreGameState(state);
+          await restoreGameState(state);
 
           const outerSave = {
             ...data.saveData,
@@ -2735,7 +2821,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const decryptedText = await decryptData(pendingCloudSaveToResolve.saveData, sessionPassword);
       const state = JSON.parse(decryptedText);
-      restoreGameState(state);
+      await restoreGameState(state);
       updateUI();
 
       const plainText = JSON.stringify(state);
@@ -2779,10 +2865,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Automated hourly saves
+  // Automated hourly saves (locally)
   setInterval(async () => {
     if (gameStarted) {
       await saveGameLocal();
+    }
+  }, 60 * 60 * 1000);
+
+  // Automated hourly cloud syncs (real time: 1 hour)
+  setInterval(async () => {
+    if (gameStarted) {
+      await syncWithCloud().catch(err => console.error("Auto cloud sync failed:", err));
     }
   }, 60 * 60 * 1000);
 
@@ -2820,7 +2913,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error("Invalid state structure");
       }
       sessionPassword = pw;
-      restoreGameState(state);
+      await restoreGameState(state);
       startGameSession();
       syncWithCloud().catch(err => console.error("Initial load sync failed:", err));
     } catch (err) {
@@ -2858,7 +2951,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     sessionPassword = pw;
-    restoreGameState(pendingStateToLoad);
+    await restoreGameState(pendingStateToLoad);
     await saveGameLocal();
     startGameSession();
   });
@@ -2993,7 +3086,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error("Invalid state structure");
       }
       sessionPassword = pw;
-      restoreGameState(state);
+      await restoreGameState(state);
       await saveGameLocal();
       startGameSession();
       addNewsItem({
@@ -3030,7 +3123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     sessionPassword = pw;
-    restoreGameState(importedStateToLoad);
+    await restoreGameState(importedStateToLoad);
     await saveGameLocal();
     startGameSession();
     addNewsItem({
@@ -3085,6 +3178,122 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('zoom-in-btn').addEventListener('click', zoomIn);
   document.getElementById('zoom-out-btn').addEventListener('click', zoomOut);
   document.getElementById('zoom-reset-btn').addEventListener('click', resetCamera);
+
+  // --- Mayor Profile Avatar & Password Settings Listeners ---
+  const mayorSettingsModal = document.getElementById('mayor-settings-modal');
+  const btnCloseMayorSettings = document.getElementById('btn-close-mayor-settings');
+  const changePwError = document.getElementById('change-pw-error');
+  const changePwSuccess = document.getElementById('change-pw-success');
+  const btnSubmitChangePw = document.getElementById('btn-submit-change-pw');
+  const profilePicInput = document.getElementById('profile-pic-input');
+  const profilePicHoverBtn = document.getElementById('profile-pic-hover-btn');
+
+  // Trigger file dialog on avatar click
+  if (profilePicHoverBtn && profilePicInput) {
+    profilePicHoverBtn.addEventListener('click', () => {
+      profilePicInput.click();
+    });
+  }
+
+  // Handle avatar upload converting to base64 DataURL
+  if (profilePicInput) {
+    profilePicInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (!file.type.startsWith('image/')) {
+          alert(currentLang === 'bm' ? "Sila pilih fail imej sahaja." : "Please select an image file only.");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          stats.profilePic = event.target.result;
+          await saveGameLocal();
+          updateUI();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Open settings modal
+  const mayorSettingsBtn = document.getElementById('mayor-settings-btn');
+  if (mayorSettingsBtn && mayorSettingsModal) {
+    mayorSettingsBtn.addEventListener('click', () => {
+      if (changePwError) changePwError.style.display = 'none';
+      if (changePwSuccess) changePwSuccess.style.display = 'none';
+      document.getElementById('change-pw-current').value = '';
+      document.getElementById('change-pw-new').value = '';
+      document.getElementById('change-pw-confirm').value = '';
+      mayorSettingsModal.style.display = 'flex';
+    });
+  }
+
+  // Close settings modal
+  if (btnCloseMayorSettings && mayorSettingsModal) {
+    btnCloseMayorSettings.addEventListener('click', () => {
+      mayorSettingsModal.style.display = 'none';
+    });
+  }
+
+  // Submit Password Change
+  if (btnSubmitChangePw) {
+    btnSubmitChangePw.addEventListener('click', async () => {
+      const currPw = document.getElementById('change-pw-current').value;
+      const newPw = document.getElementById('change-pw-new').value;
+      const confPw = document.getElementById('change-pw-confirm').value;
+      const t = TRANSLATIONS[currentLang];
+
+      if (changePwError) changePwError.style.display = 'none';
+      if (changePwSuccess) changePwSuccess.style.display = 'none';
+
+      // Verify current password hash
+      const currHash = await getPasswordHash(currPw);
+      const sessionHash = await getPasswordHash(sessionPassword);
+      if (currHash !== sessionHash) {
+        if (changePwError) {
+          changePwError.innerText = t.incorrectCurrentPassword || "Current password is incorrect.";
+          changePwError.style.display = 'block';
+        }
+        return;
+      }
+
+      // Verify new password
+      if (!newPw || newPw.length < 3) {
+        if (changePwError) {
+          changePwError.innerText = t.passwordTooShort || "Password must be at least 3 characters.";
+          changePwError.style.display = 'block';
+        }
+        return;
+      }
+
+      if (newPw !== confPw) {
+        if (changePwError) {
+          changePwError.innerText = t.passwordMismatch;
+          changePwError.style.display = 'block';
+        }
+        return;
+      }
+
+      // Update password
+      sessionPassword = newPw;
+      await saveGameLocal();
+
+      if (changePwSuccess) {
+        changePwSuccess.innerText = t.passwordChangedSuccess || "Password changed successfully!";
+        changePwSuccess.style.display = 'block';
+      }
+
+      // Clear input fields
+      document.getElementById('change-pw-current').value = '';
+      document.getElementById('change-pw-new').value = '';
+      document.getElementById('change-pw-confirm').value = '';
+
+      // Auto close modal after 1.5 seconds
+      setTimeout(() => {
+        if (mayorSettingsModal) mayorSettingsModal.style.display = 'none';
+      }, 1500);
+    });
+  }
 
   // Initialize ThreeJS scene
   init3D();

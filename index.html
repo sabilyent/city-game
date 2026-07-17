@@ -278,22 +278,45 @@
         </div>
       </div>
       
-      <!-- AI Goal Panel -->
-      <div class="goal-panel glass-panel-indigo">
-        <div class="goal-header">
-          <span class="goal-header-title">
-            <span id="advisor-badge-dot" class="goal-status-indicator pulse"></span>
-            <span id="advisor-title-lbl">AI City Advisor</span>
-          </span>
-        </div>
-        <div class="goal-body">
-          <p id="goal-desc" class="goal-description">Analyzing city data...</p>
-          <div class="goal-progress-bar">
-            <div id="goal-progress" class="goal-progress"></div>
+      <!-- HUD Right Side Wrapper -->
+      <div class="hud-right-panel" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- AI Goal Panel -->
+        <div class="goal-panel glass-panel-indigo">
+          <div class="goal-header">
+            <span class="goal-header-title">
+              <span id="advisor-badge-dot" class="goal-status-indicator pulse"></span>
+              <span id="advisor-title-lbl">AI City Advisor</span>
+            </span>
           </div>
-          <div class="goal-footer">
-            <span id="goal-reward-val" class="goal-reward">+$300</span>
-            <button id="claim-reward-btn" class="btn-primary" disabled>Collect Reward</button>
+          <div class="goal-body">
+            <p id="goal-desc" class="goal-description">Analyzing city data...</p>
+            <div class="goal-progress-bar">
+              <div id="goal-progress" class="goal-progress"></div>
+            </div>
+            <div class="goal-footer">
+              <span id="goal-reward-val" class="goal-reward">+$300</span>
+              <button id="claim-reward-btn" class="btn-primary" disabled>Collect Reward</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mayor Profile Panel -->
+        <div class="mayor-panel glass-panel" style="display: flex; align-items: center; gap: 12px; padding: 10px 16px;">
+          <!-- Rounded Profile Picture -->
+          <div class="profile-pic-container">
+            <img id="mayor-avatar" src="" style="display: none;">
+            <div id="mayor-avatar-placeholder" style="font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #fff;">M</div>
+            <div id="profile-pic-hover-btn" title="Upload Avatar">📷</div>
+            <input type="file" id="profile-pic-input" style="display: none;" accept="image/*">
+          </div>
+          
+          <!-- Mayor Name & Settings Button -->
+          <div style="flex: 1; display: flex; flex-direction: column;">
+            <span style="font-size: 8px; text-transform: uppercase; font-weight: 700; color: #94a3b8; letter-spacing: 0.05em;">Mayor of SkyMetropolis</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="mayor-name-lbl" style="font-family: var(--font-display); font-size: 15px; font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">Mayor</span>
+              <button id="mayor-settings-btn" class="lang-btn" style="padding: 2px 6px; font-size: 12px; cursor: pointer; border-radius: 4px;" title="Mayor Settings">⚙️</button>
+            </div>
           </div>
         </div>
       </div>
@@ -450,6 +473,40 @@
             <button id="btn-resolve-local" class="btn-secondary" style="margin-top: 10px; width: 100%;">Keep Local</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mayor Settings Modal -->
+  <div id="mayor-settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card glass-panel" style="max-width: 380px;">
+      <div class="modal-header">
+        <h2 id="modal-mayor-settings-title" class="modal-title">Mayor Settings</h2>
+        <button id="btn-close-mayor-settings" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Change Password Form -->
+        <h3 id="change-pw-section-title" style="margin-top: 0; font-size: 14px; color: #38bdf8; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">Change Password</h3>
+        
+        <div class="start-input-group" style="margin-bottom: 12px;">
+          <label id="change-pw-curr-lbl" for="change-pw-current" class="start-input-label">Current Password</label>
+          <input type="password" id="change-pw-current" class="start-input" placeholder="Enter current password...">
+        </div>
+        
+        <div class="start-input-group" style="margin-bottom: 12px;">
+          <label id="change-pw-new-lbl" for="change-pw-new" class="start-input-label">New Password</label>
+          <input type="password" id="change-pw-new" class="start-input" placeholder="Enter new password...">
+        </div>
+        
+        <div class="start-input-group" style="margin-bottom: 16px;">
+          <label id="change-pw-conf-lbl" for="change-pw-confirm" class="start-input-label">Confirm New Password</label>
+          <input type="password" id="change-pw-confirm" class="start-input" placeholder="Confirm new password...">
+        </div>
+        
+        <div id="change-pw-error" class="error-message" style="margin-bottom: 12px; display: none;"></div>
+        <div id="change-pw-success" class="error-message" style="margin-bottom: 12px; display: none; color: #4ade80;">Password changed successfully!</div>
+        
+        <button id="btn-submit-change-pw" class="btn-start" style="width: 100%;">Update Password</button>
       </div>
     </div>
   </div>
