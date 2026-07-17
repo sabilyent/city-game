@@ -90,7 +90,7 @@ const TRANSLATIONS = {
     aiAdvisor: "AI City Advisor",
     aiAdvisorDesc: "Enable dynamic quests & news events via Gemini API",
     startBuilding: "Start Building",
-    createdBy: "Created by",
+    credits: "1st Idea ammar modify by Maui (threads.net/@maui_sabily)",
     treasury: "Treasury",
     citizens: "Citizens",
     day: "Day",
@@ -191,7 +191,7 @@ const TRANSLATIONS = {
     aiAdvisor: "Penasihat Bandar AI",
     aiAdvisorDesc: "Aktifkan tugasan dinamik & berita melalui Gemini API",
     startBuilding: "Mula Membina",
-    createdBy: "Dibuat oleh",
+    credits: "1st Idea ammar modify by Maui (threads.net/@maui_sabily)",
     treasury: "Perbendaharaan",
     citizens: "Penduduk",
     day: "Hari",
@@ -1170,7 +1170,7 @@ const setupStartScreen = () => {
   document.getElementById('start-subtitle').innerText = t.subtitle;
   document.getElementById('start-advisor-title').innerText = t.aiAdvisor;
   document.getElementById('start-advisor-desc').innerText = t.aiAdvisorDesc;
-  document.getElementById('created-by-lbl').innerText = `${t.createdBy} @ammaar`;
+  document.getElementById('created-by-lbl').innerText = t.credits;
 
   // Set translations for unlock panel
   document.getElementById('unlock-title').innerText = t.unlockTitle;
@@ -2657,7 +2657,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Cloud configuration and Sync event listeners
   document.getElementById('start-cloud-config-btn').addEventListener('click', () => {
-    document.getElementById('cloud-setup-url').value = appsScriptUrl;
+    document.getElementById('cloud-setup-url').value = localStorage.getItem('skymetropolis_apps_script_url') || "";
     showStartupPanel('panel-cloud-setup');
   });
 
@@ -2675,8 +2675,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-cloud-setup-save').addEventListener('click', () => {
     const urlInput = document.getElementById('cloud-setup-url').value.trim();
-    appsScriptUrl = urlInput;
-    localStorage.setItem('skymetropolis_apps_script_url', urlInput);
+    if (urlInput) {
+      appsScriptUrl = urlInput;
+      localStorage.setItem('skymetropolis_apps_script_url', urlInput);
+    } else {
+      localStorage.removeItem('skymetropolis_apps_script_url');
+      appsScriptUrl = OBFUSCATED_CLOUD_URL ? atob(OBFUSCATED_CLOUD_URL) : "";
+    }
 
     const hudUrlInput = document.getElementById('hud-cloud-url');
     if (hudUrlInput) hudUrlInput.value = urlInput;
@@ -2787,7 +2792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // HUD buttons & modals triggers
   document.getElementById('sync-btn').addEventListener('click', () => {
-    document.getElementById('hud-cloud-url').value = appsScriptUrl;
+    document.getElementById('hud-cloud-url').value = localStorage.getItem('skymetropolis_apps_script_url') || "";
     updateSyncStatusUI(navigator.onLine ? "online" : "offline");
     document.getElementById('cloud-modal').style.display = 'flex';
   });
@@ -2801,9 +2806,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('hud-cloud-url').addEventListener('change', (e) => {
-    appsScriptUrl = e.target.value.trim();
-    localStorage.setItem('skymetropolis_apps_script_url', appsScriptUrl);
-    document.getElementById('cloud-setup-url').value = appsScriptUrl;
+    const urlInput = e.target.value.trim();
+    if (urlInput) {
+      appsScriptUrl = urlInput;
+      localStorage.setItem('skymetropolis_apps_script_url', urlInput);
+    } else {
+      localStorage.removeItem('skymetropolis_apps_script_url');
+      appsScriptUrl = OBFUSCATED_CLOUD_URL ? atob(OBFUSCATED_CLOUD_URL) : "";
+    }
+    document.getElementById('cloud-setup-url').value = urlInput;
   });
 
   document.getElementById('leaderboard-btn').addEventListener('click', async () => {
