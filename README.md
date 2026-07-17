@@ -1,45 +1,67 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# SkyMetropolis - 3D Isometric AI City Builder
 
-# Run and deploy your AI Studio app
+A beautiful, high-performance 3D isometric city-builder simulation game built with pure **HTML5, CSS3, Vanilla JavaScript, and Three.js**. The game features procedural voxel-style rendering, dynamic systems (flowing vehicle traffic, citizens walking, chimney smoke stacks), and an optional Penasihat AI advisor integration using the Google Gemini API.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/00424bac-8f5f-4f25-88c1-ea81f1b16459
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Set the `GEMINI_API_KEY` in `.env.local` to your Gemini API key.
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
+Since the project is built with vanilla files, there is **zero build step** and **no node_modules required**. It runs natively in any browser and can be served as a direct static site on GitHub Pages.
 
 ---
 
-## Deploy to GitHub Pages (Static Hosting)
+## Live Demo
+Check out the live deployment on GitHub Pages:
+**[https://sabilyent.github.io/city-game/](https://sabilyent.github.io/city-game/)**
 
-The project includes a GitHub Actions workflow in `.github/workflows/deploy.yml` that automatically builds and deploys your site whenever changes are pushed to the `main` branch. 
+---
 
-If your website is currently showing a **blue blank screen** at `https://sabilyent.github.io/city-game/`, it is because GitHub Pages is serving the raw, unbuilt source code from the `main` branch root (which browsers cannot run). 
+## Features & Gameplay
 
-### How to Fix & Configure Deployment:
+* **Procedural Architecture**: Homes, skyscrapers, corner stores, factories, and parks are dynamically generated on tiles with low-poly variations.
+* **Dynamic Traffic & Citizens**: Instanced vehicles navigate road junctions, and citizens bounce-walk across roads, parks, and empty grass zones.
+* **Bilingual Support**: Instant localization swap between English (EN) and Bahasa Melayu (BM).
+* **AI City Advisor (Gemini API)**: Generates tailored, dynamic quests and witty news headlines based on your current city data.
+* **Sandbox Mode**: Plays offline with static, local fallbacks if the Gemini API key is not present.
 
-1. **Go to your GitHub Repository Settings**:
-   Navigate to your repository page on GitHub.
-2. **Open the Pages Section**:
-   Click on the **Settings** tab at the top of the repository, then select **Pages** from the left-hand sidebar menu.
-3. **Change Build and Deployment Source**:
-   * Under the **Build and deployment** section, look for the **Source** option.
-   * Change it from **"Deploy from a branch"** to **"GitHub Actions"**.
-4. **Trigger Deployment**:
-   * Push any change (such as this `README.md` update) to your `main` branch.
-   * Go to the **Actions** tab on GitHub to monitor the build and deployment process.
-   * Once the workflow completes, your website will be successfully deployed using the optimized production files from the `dist/` folder.
+---
+
+## How to Play
+
+### 1. Build Tools (Bottom Panel)
+* **Road ($10)**: Create connections between tiles. Required for traffic to flow.
+* **House ($100)**: Attracts citizens (+5 population/day).
+* **Shop ($200)**: Boosts daily income (+$15/day).
+* **Factory ($400)**: Greatly boosts daily income (+$40/day) but does not grow population.
+* **Park ($50)**: Beautifies the area (+1 population/day).
+* **Demolish ($5)**: Destroys existing structures.
+
+### 2. Camera Controls (Mouse / Touch)
+* **Rotate**: Hold `Left Click + Drag` or use two-finger swipe.
+* **Pan**: Hold `Right Click + Drag` or `Ctrl + Left Click + Drag` or use two-finger drag.
+* **Zoom**: Use the scroll wheel or pinch-to-zoom.
+
+---
+
+## Run Locally
+
+Simply open the `index.html` file directly in your browser!
+
+Or, run a simple local web server:
+
+### Python 3
+```bash
+python3 -m http.server 3000
+```
+Then open `http://localhost:3000` in your web browser.
+
+### Node.js (Live Server)
+```bash
+npx live-server
+```
+
+---
+
+## Using the AI Advisor (Gemini API Key)
+
+To activate dynamic AI quests and headlines:
+* Add your Gemini API key directly to the URL query string when visiting the site:
+  `https://sabilyent.github.io/city-game/?key=YOUR_GEMINI_API_KEY`
+* Or, if running locally, you can append `?key=YOUR_GEMINI_API_KEY` to `http://localhost:3000`.
+* The key is handled entirely client-side and sent directly to Google's official Gemini API endpoints. If no key is set, the game automatically runs in **Mod Bebas / Sandbox Mode** using localized offline fallback lists.

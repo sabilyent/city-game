@@ -1,32 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PolyCity AI 3D</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Hide scrollbar for main view to act like a game canvas */
-        body { overflow: hidden; background-color: #0c4a6e; /* sky-900 */ }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.0/",
-    "react": "https://esm.sh/react@^19.2.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.0/",
-    "react-dom": "https://esm.sh/react-dom@^19.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.25.0",
-    "three": "https://esm.sh/three@^0.173.0",
-    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.0.0",
-    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.0.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="./index.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyMetropolis - 3D Isometric AI City Builder</title>
+  <link rel="stylesheet" href="./index.css">
+  
+  <!-- Load Three.js and OrbitControls/MapControls via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Start Screen Overlay -->
+  <div id="start-screen" class="start-screen-overlay">
+    <div class="start-card glass-panel">
+      <div class="start-glow-1"></div>
+      <div class="start-glow-2"></div>
+      
+      <!-- Language Toggle -->
+      <div class="start-lang-container">
+        <div class="lang-selector">
+          <button id="start-lang-en" class="lang-btn active">EN</button>
+          <button id="start-lang-bm" class="lang-btn">BM</button>
+        </div>
+      </div>
+      
+      <div class="start-header">
+        <h1 id="start-title" class="start-title">SkyMetropolis</h1>
+        <p id="start-subtitle" class="start-subtitle">Isometric City Builder</p>
+      </div>
+      
+      <!-- AI Advisor Toggle -->
+      <div class="advisor-toggle-panel" onclick="document.getElementById('advisor-toggle').click()">
+        <div class="advisor-info">
+          <div class="advisor-title-row">
+            <span id="start-advisor-title" class="advisor-title">AI City Advisor</span>
+            <span id="start-badge-dot" class="advisor-badge-dot active"></span>
+          </div>
+          <span id="start-advisor-desc" class="advisor-desc">Enable dynamic quests & news events via Gemini API</span>
+        </div>
+        <label class="switch" onclick="event.stopPropagation()">
+          <input type="checkbox" id="advisor-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <!-- Start Button -->
+      <button id="start-btn" class="btn-start">Start Building</button>
+      
+      <!-- Credits -->
+      <a href="https://x.com/ammaar" target="_blank" rel="noreferrer" class="credit-link" id="created-by-lbl">Created by @ammaar</a>
+    </div>
+  </div>
+
+  <!-- Main Game HUD Overlay -->
+  <div id="hud-overlay" class="ui-overlay" style="display: none;">
+    
+    <!-- Top HUD Bar -->
+    <div class="top-bar">
+      
+      <!-- Stats Panel -->
+      <div class="stats-widget glass-panel">
+        <div class="stat-item">
+          <span id="treasury-lbl" class="stat-label">Treasury</span>
+          <span class="stat-item-val money">$<span id="stat-money-val">1,000</span></span>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
+        <div class="stat-item">
+          <span id="citizens-lbl" class="stat-label">Citizens</span>
+          <span class="stat-item-val population"><span id="stat-pop-val">0</span></span>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
+        <div class="stat-item">
+          <span id="day-lbl" class="stat-label">Day</span>
+          <span class="stat-item-val" style="color: #fff;"><span id="stat-day-val">1</span></span>
+        </div>
+        
+        <div class="stat-divider"></div>
+        
+        <!-- HUD Language Selector -->
+        <div class="lang-selector">
+          <button id="hud-lang-en" class="lang-btn active">EN</button>
+          <button id="hud-lang-bm" class="lang-btn">BM</button>
+        </div>
+      </div>
+      
+      <!-- AI Goal Panel -->
+      <div class="goal-panel glass-panel-indigo">
+        <div class="goal-header">
+          <span class="goal-header-title">
+            <span id="advisor-badge-dot" class="goal-status-indicator pulse"></span>
+            <span id="advisor-title-lbl">AI City Advisor</span>
+          </span>
+        </div>
+        <div class="goal-body">
+          <p id="goal-desc" class="goal-description">Analyzing city data...</p>
+          <div class="goal-progress-bar">
+            <div id="goal-progress" class="goal-progress"></div>
+          </div>
+          <div class="goal-footer">
+            <span id="goal-reward-val" class="goal-reward">+$300</span>
+            <button id="claim-reward-btn" class="btn-primary" disabled>Collect Reward</button>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- Bottom HUD Bar -->
+    <div class="bottom-bar">
+      
+      <!-- News Feed panel -->
+      <div class="news-panel glass-panel">
+        <div id="news-header-lbl" class="news-header">City Feed</div>
+        <div id="news-body" class="news-body">
+          <div class="news-item neutral" id="no-news-placeholder">Welcome to SkyMetropolis. Terrain generation complete.</div>
+        </div>
+      </div>
+      
+      <!-- Building Selector Toolbar -->
+      <div class="toolbar-container">
+        <div id="toolbar-label" class="toolbar-label">Build</div>
+        <div class="toolbar glass-panel">
+          <!-- Bulldoze -->
+          <button id="tool-btn-None" class="tool-btn" title="Clear a tile">
+            <div class="tool-icon-box" style="border-color: rgba(239, 68, 68, 0.4); color: var(--color-red);">✕</div>
+            <span class="tool-name">Runtuh</span>
+            <span class="tool-cost"></span>
+          </button>
+          
+          <!-- Road -->
+          <button id="tool-btn-Road" class="tool-btn active" title="Connects buildings">
+            <div class="tool-icon-box" style="background-color: #374151; border-color: rgba(0, 0, 0, 0.3);">
+              <div style="width: 100%; height: 4px; background: #fbbf24; transform: rotate(-45deg);"></div>
+            </div>
+            <span class="tool-name">Road</span>
+            <span class="tool-cost">$10</span>
+          </button>
+          
+          <!-- Residential -->
+          <button id="tool-btn-Residential" class="tool-btn" title="+5 Citizens/day">
+            <div class="tool-icon-box" style="background-color: #f87171; border-color: rgba(0,0,0,0.3);">🏠</div>
+            <span class="tool-name">House</span>
+            <span class="tool-cost">$100</span>
+          </button>
+          
+          <!-- Commercial -->
+          <button id="tool-btn-Commercial" class="tool-btn" title="+$15/day">
+            <div class="tool-icon-box" style="background-color: #60a5fa; border-color: rgba(0,0,0,0.3);">🛍️</div>
+            <span class="tool-name">Shop</span>
+            <span class="tool-cost">$200</span>
+          </button>
+          
+          <!-- Industrial -->
+          <button id="tool-btn-Industrial" class="tool-btn" title="+$40/day">
+            <div class="tool-icon-box" style="background-color: #facc15; border-color: rgba(0,0,0,0.3);">🏭</div>
+            <span class="tool-name">Factory</span>
+            <span class="tool-cost">$400</span>
+          </button>
+          
+          <!-- Park -->
+          <button id="tool-btn-Park" class="tool-btn" title="Looks nice">
+            <div class="tool-icon-box" style="background-color: #4ade80; border-color: rgba(0,0,0,0.3);">🌳</div>
+            <span class="tool-name">Park</span>
+            <span class="tool-cost">$50</span>
+          </button>
+        </div>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  <!-- Load Game Engine -->
+  <script src="./game.js"></script>
 </body>
 </html>
