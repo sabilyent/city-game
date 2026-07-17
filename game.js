@@ -171,6 +171,8 @@ let smokeParticles = [];
 let hoveredTile = null;
 let previewGroup = null;
 let cursorMesh = null;
+let clickStartX = 0;
+let clickStartY = 0;
 
 // Helper to map coordinates
 const gridToWorld = (x, y) => [x - worldOffset, 0, y - worldOffset];
@@ -782,6 +784,7 @@ const init3D = () => {
   window.addEventListener('resize', onWindowResize);
   renderer.domElement.addEventListener('pointermove', onPointerMove);
   renderer.domElement.addEventListener('pointerdown', onPointerDown);
+  renderer.domElement.addEventListener('pointerup', onPointerUp);
   renderer.domElement.addEventListener('pointerleave', () => {
     hoveredTile = null;
     cursorMesh.visible = false;
@@ -846,12 +849,23 @@ const onPointerMove = (e) => {
 };
 
 const onPointerDown = (e) => {
-  // Left click down
-  if (e.button === 0 && hoveredTile) {
-    handleTileClick(hoveredTile.x, hoveredTile.y);
+  if (e.button === 0) {
+    clickStartX = e.clientX;
+    clickStartY = e.clientY;
+  }
+};
+
+const onPointerUp = (e) => {
+  if (e.button === 0) {
+    const dx = e.clientX - clickStartX;
+    const dy = e.clientY - clickStartY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
     
-    // Re-evaluate hover to update preview state
-    onPointerMove(e);
+    // Trigger build only if dragging distance is very small (less than 5px)
+    if (dist < 5 && hoveredTile) {
+      handleTileClick(hoveredTile.x, hoveredTile.y);
+      onPointerMove(e);
+    }
   }
 };
 
@@ -1653,7 +1667,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Hide Start Overlay & Reveal HUD Overlay
     document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('hud-overlay').style.pointerEvents = 'auto';
     document.getElementById('hud-overlay').style.display = 'flex';
     
     // Log complete terrain initialization
