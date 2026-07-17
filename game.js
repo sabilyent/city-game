@@ -1875,6 +1875,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
+  // Camera Zoom Handlers
+  const zoomIn = () => {
+    camera.zoom = Math.min(5.0, camera.zoom * 1.25);
+    camera.updateProjectionMatrix();
+    controls.update();
+  };
+  
+  const zoomOut = () => {
+    camera.zoom = Math.max(0.2, camera.zoom * 0.8);
+    camera.updateProjectionMatrix();
+    controls.update();
+  };
+  
+  const resetCamera = () => {
+    camera.zoom = 1.0;
+    camera.position.set(20, 20, 20);
+    controls.target.set(0, 0, 0);
+    camera.updateProjectionMatrix();
+    controls.update();
+  };
+  
+  document.getElementById('zoom-in-btn').addEventListener('click', zoomIn);
+  document.getElementById('zoom-out-btn').addEventListener('click', zoomOut);
+  document.getElementById('zoom-reset-btn').addEventListener('click', resetCamera);
+  
   // Initialize ThreeJS scene
   init3D();
 });
