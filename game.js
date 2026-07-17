@@ -296,7 +296,7 @@ let sessionPassword = "";
 let pendingStateToLoad = null;
 let importedStateToLoad = null;
 
-// Base64 obfuscated URL to keep your Google Sheet URL hidden in the source code.
+// XXXXXX obfuscated URL to keep your Google Sheet URL hidden in the source code.
 // To generate this, run `btoa("https://script.google.com/...")` in your browser console and paste the string below.
 const OBFUSCATED_CLOUD_URL = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J5NVE2bGdPVlE0TFBqTVZKU28wNTh5VnpENzBZVXBkY2UtNUZpZTU0MWttVXN0Y0lGZXkzUk1RbFFUVl9RWHIxenovZXhlYw==";
 
@@ -731,7 +731,7 @@ const saveGameLocal = async () => {
     state.checksum = await generateStateChecksum(state, sessionPassword);
     const plainText = JSON.stringify(state);
     const encrypted = await encryptData(plainText, sessionPassword);
-    
+
     const passwordHash = await getPasswordHash(sessionPassword);
     const outerSave = {
       ...encrypted,
@@ -750,8 +750,8 @@ const restoreGameState = async (state) => {
     try {
       const computed = await generateStateChecksum(state, sessionPassword);
       if (state.checksum !== computed) {
-        alert(currentLang === 'bm' 
-          ? "Ralat: Fail simpanan dikesan telah diubah suai secara tidak sah!" 
+        alert(currentLang === 'bm'
+          ? "Ralat: Fail simpanan dikesan telah diubah suai secara tidak sah!"
           : "Error: Save data detected as modified or corrupted!");
         throw new Error("Save data checksum mismatch");
       }
